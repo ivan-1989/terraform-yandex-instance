@@ -1,9 +1,10 @@
 data "yandex_client_config" "client" {}
 
 
-resource "random_integer" "unique" {
-   min = 1000
-   max = 9999
+resource "random_id" "unique" {
+#   min = 1000
+#   max = 9999
+   byte_length = 8
 }
 
 resource "random_id" "unique_name" {
@@ -20,17 +21,18 @@ data "local_file" "nginx_vs_default_conf" {
 
 locals {
   user = "ubuntu"
-  VS_PASS = random_integer.unique.result
+  VS_PASS = random_id.unique.hex
   user_home_fold = "/home/${local.user}"
   scripts_fold = "${local.user_home_fold}/"
   ssh_key_pub = "C:\\Users\\ivan\\.ssh\\id_rsa.pub"
   ssh_key_prv = "C:\\Users\\ivan\\.ssh\\id_rsa"
+  prefix = "jump-host"
 }
 
 module "iam_accounts" {
   source = "git::https://github.com/terraform-yacloud-modules/terraform-yandex-iam.git//modules/iam-account?ref=v1.0.0"
 
-  name = "iam-${random_id.unique_name.hex}"
+  name = "${local.prefix}-sa-${random_id.unique_name.hex}"
   folder_roles = [
     "editor"
 #    "container-registry.images.puller",
@@ -53,12 +55,12 @@ module "iam_accounts" {
 module "network" {
   source = "git::https://github.com/terraform-yacloud-modules/terraform-yandex-vpc.git?ref=v1.0.0"
   folder_id = data.yandex_client_config.client.folder_id
-  blank_name = "net-${random_id.unique_name.hex}"
+  blank_name = "${local.prefix}-net-${random_id.unique_name.hex}"
   labels = {
     repo = "terraform-yacloud-modules/terraform-yandex-vpc"
   }
-  azs = ["ru-central1-a"]
-  private_subnets = [["10.1.10.0/24"]]
+  azs = ["ru-central1-a", "ru-central1-b", "ru-central1-d"]
+  private_subnets = [["10.1.10.0/24"], ["10.1.20.0/24"], ["10.1.30.0/24"]]
   create_vpc         = true
   create_nat_gateway = true
 }
@@ -66,13 +68,13 @@ module "network" {
 module "yandex_compute_instance" {
   source = "../../"
   folder_id = data.yandex_client_config.client.folder_id
-  name = "jump-host-${random_id.unique_name.hex}"
+  name = "${local.prefix}-${random_id.unique_name.hex}"
   zone       = "ru-central1-a"
   subnet_id  = module.network.private_subnets_ids[0]
   enable_nat = true
   create_pip = true
 
-  hostname = "jump-host-${random_id.unique_name.hex}"
+  hostname = "${local.prefix}-${random_id.unique_name.hex}"
   generate_ssh_key = false
   ssh_user         = local.user
   ssh_pubkey       = local.ssh_key_pub
