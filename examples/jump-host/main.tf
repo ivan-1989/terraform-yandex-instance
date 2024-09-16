@@ -84,12 +84,45 @@ module "yandex_compute_instance" {
 
 }
 
+resource "yandex_vpc_default_security_group" "default-sg" {
+  description = "description for default security group"
+  network_id  = "${module.network.vpc_id}"
+
+  ingress {
+    protocol       = "TCP"
+    description    = "SSH"
+    v4_cidr_blocks = ["0.0.0.0/0"]
+    port           = 22
+  }
+  ingress {
+    protocol       = "TCP"
+    description    = "HTTPS"
+    v4_cidr_blocks = ["0.0.0.0/0"]
+    port           = 443
+  }
+  ingress {
+    protocol       = "TCP"
+    description    = "HTTP"
+    v4_cidr_blocks = ["0.0.0.0/0"]
+    port           = 80
+  }
+
+  egress {
+    protocol       = "ANY"
+    description    = "rule2 description"
+    v4_cidr_blocks = ["0.0.0.0/0"]
+    from_port      = 0
+    to_port      = 65535
+  }
+}
+
 resource "null_resource" "provision" {
   depends_on = [module.yandex_compute_instance]
 
   provisioner "file" {
     content     = templatefile(data.local_file.nginx_vs_default_conf.filename, {public_ip = module.yandex_compute_instance.instance_public_ip})
-    destination = "/tmp/nginx_default.conf"
+#    destination = "/tmp/nginx_default.conf"
+    destination = "${local.scripts_fold}/nginx_default.conf"
     connection {
       type        = "ssh"
       user        = local.user

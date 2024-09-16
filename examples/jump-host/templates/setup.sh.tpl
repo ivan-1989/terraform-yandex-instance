@@ -101,7 +101,8 @@ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 8919F6BD2B48D7
 
 echo "deb [trusted=yes] https://packages.clickhouse.com/deb stable main" | sudo tee /etc/apt/sources.list.d/clickhouse.list
 
-cd /etc/apt && sudo cp trusted.gpg trusted.gpg.d/ && cd ~
+#cd /etc/apt && sudo cp trusted.gpg trusted.gpg.d/ && cd ~
+sudo cp /etc/apt/trusted.gpg /etc/apt/trusted.gpg.d/ 
 
 
 
@@ -122,7 +123,7 @@ sudo dpkg -i code-server_4.22.0_amd64.deb
 sudo systemctl enable --now code-server@$USER
 
 
-sudo mv /tmp/nginx_default.conf /etc/nginx/sites-available/default
+sudo cp nginx_default.conf /etc/nginx/sites-available/default
 sudo systemctl reload nginx
 
 sudo certbot --nginx -d code.${public_ip}.sslip.io --non-interactive --agree-tos --register-unsafely-without-email
