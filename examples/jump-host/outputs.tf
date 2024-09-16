@@ -11,7 +11,7 @@ output "VS_URL" {
 
 }
 
-output "VS_PASS" {
-  value = local.VS_PASS
-}
+#output "VS_PASS" {
+#  value = local.VS_PASS
+#}
 

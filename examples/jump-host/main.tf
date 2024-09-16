@@ -1,14 +1,25 @@
 data "yandex_client_config" "client" {}
 
 
-resource "random_id" "unique" {
-#   min = 1000
-#   max = 9999
-   byte_length = 8
-}
+#resource "random_id" "unique" {
+##   min = 1000
+##   max = 9999
+#   byte_length = 8
+#}
 
 resource "random_id" "unique_name" {
    byte_length = 2
+}
+
+resource "random_password" "password" {
+#  for_each         = { for v in var.users : v.name => v if v.password == null }
+  length           = 16
+  special          = true
+  min_lower        = 1
+  min_numeric      = 1
+  min_special      = 1
+  min_upper        = 1
+  override_special = "_"
 }
 
 data "local_file" "setup-sh" {
@@ -21,7 +32,7 @@ data "local_file" "nginx_vs_default_conf" {
 
 locals {
   user = "ubuntu"
-  VS_PASS = random_id.unique.hex
+  VS_PASS = "${random_password.password.result}"
   user_home_fold = "/home/${local.user}"
   scripts_fold = "${local.user_home_fold}/"
   ssh_key_pub = "C:\\Users\\ivan\\.ssh\\id_rsa.pub"
@@ -84,6 +95,17 @@ module "yandex_compute_instance" {
 
 }
 
+module "instance_secret" {
+  source = "git::https://github.com/terraform-yacloud-modules/terraform-yandex-lockbox.git?ref=v1.0.0"
+
+  name = "${local.prefix}-secret-${random_id.unique_name.hex}"
+
+  entries =  {
+    "VS_PASS" : local.VS_PASS
+  }
+  deletion_protection = false
+}
+
 resource "yandex_vpc_default_security_group" "default-sg" {
   description = "description for default security group"
   network_id  = "${module.network.vpc_id}"
@@ -109,7 +131,7 @@ resource "yandex_vpc_default_security_group" "default-sg" {
 
   egress {
     protocol       = "ANY"
-    description    = "rule2 description"
+    description    = "Pass to all"
     v4_cidr_blocks = ["0.0.0.0/0"]
     from_port      = 0
     to_port      = 65535
